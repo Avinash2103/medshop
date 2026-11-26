@@ -50,3 +50,43 @@ td,
 .num {
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- Printing ----------
+   Only #print-root prints; the app screen is hidden. Bills use a plain, high-contrast layout. */
+#print-root {
+  display: none;
+}
+@media print {
+  body {
+    background: #fff;
+  }
+  body > #root {
+    display: none !important;
+  }
+  #print-root {
+    display: block;
+    color: #000;
+    font-family: "Segoe UI", "Nirmala UI", Arial, sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  #print-root[data-paper="80mm"],
+  #print-root[data-paper="58mm"] {
+    font-size: 11px;
+    line-height: 1.25;
+  }
+  #print-root[data-paper="58mm"] {
+    font-size: 9.5px;
+  }
+  #print-root[data-paper="A5"],
+  #print-root[data-paper="A4"] {
+    font-size: 12px;
+  }
+  #print-root table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  #print-root tr {
+    break-inside: avoid;
+  }
+}

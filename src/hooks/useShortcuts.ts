@@ -18,19 +18,18 @@ export const ROUTE_KEYS: Record<string, string> = {
 
 export const SEARCH_EVENT = "medshop:focus-search";
 
-/** Esc goes one level up: /stock/items/12 → /stock, /suppliers → home. */
+const LOCAL_SEARCH = ["/bill", "/purchase", "/stock", "/bills", "/purchases", "/suppliers", "/customers"];
+
+/** Esc goes one level up: /stock/items/12 → /stock, /bills/7 → /bills, /suppliers → home. */
 export function parentPath(path: string): string | null {
   if (path === "/" || path === "") return null;
   const parts = path.split("/").filter(Boolean);
-  if (parts[0] === "stock" && parts.length > 1) return "/stock";
-  return "/";
+  return parts.length > 1 ? `/${parts[0]}` : "/";
 }
 
 export function useGlobalShortcuts() {
   const navigate = useNavigate();
-  const { pathname, state } = useLocation();
-  // Pages like /import remember where the user came from, so Esc returns there.
-  const from = (state as { from?: string } | null)?.from;
+  const { pathname } = useLocation();
 
   useEffect(() => {
     const go = (to: string) => {
@@ -46,6 +45,11 @@ export function useGlobalShortcuts() {
       }
       if (e.key === "F4" || (e.key === "/" && !isTyping(e.target))) {
         e.preventDefault();
+        // Screens with their own search box (billing, purchase, lists) focus it instead of going home.
+        if (LOCAL_SEARCH.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
+          window.dispatchEvent(new Event(SEARCH_EVENT));
+          return;
+        }
         if (pathname !== "/") {
           if (!canLeave()) return;
           navigate("/");
@@ -55,7 +59,7 @@ export function useGlobalShortcuts() {
         return;
       }
       if (e.key === "Escape") {
-        const up = pathname === "/import" && from ? from : parentPath(pathname);
+        const up = parentPath(pathname);
         if (up) {
           e.preventDefault();
           go(up);
@@ -69,7 +73,7 @@ export function useGlobalShortcuts() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [navigate, pathname, from]);
+  }, [navigate, pathname]);
 }
 
 export function isTyping(target: EventTarget | null): boolean {

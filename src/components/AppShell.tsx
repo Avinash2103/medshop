@@ -49,7 +49,7 @@ export function AppShell({ shopName }: { shopName: string }) {
         </div>
       )}
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-6">
+      <main className="mx-auto w-full max-w-[1440px] flex-1 px-6 py-6">
         <Outlet />
       </main>
     </div>

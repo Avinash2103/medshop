@@ -4,6 +4,7 @@
 // Sprint 1 text lives in strings.sprint1.ts and is merged in below.
 
 import { en1, hi1, mr1 } from "./strings.sprint1";
+import { enD, hiD, mrD } from "./strings.daily";
 
 const en0 = {
   appName: "MedShop",
@@ -45,7 +46,7 @@ const en0 = {
   dbError: "Could not open the database: {msg}",
 };
 
-const en = { ...en0, ...en1 };
+const en = { ...en0, ...en1, ...enD };
 export type StringKey = keyof typeof en;
 type Dict0 = Record<keyof typeof en0, string>;
 
@@ -129,8 +130,8 @@ const mr0: Dict0 = {
   dbError: "डेटाबेस उघडला नाही: {msg}",
 };
 
-const hi = { ...hi0, ...hi1 };
-const mr = { ...mr0, ...mr1 };
+const hi = { ...hi0, ...hi1, ...hiD };
+const mr = { ...mr0, ...mr1, ...mrD };
 
 export const dictionaries = { en, hi, mr } as const;
 export type Lang = keyof typeof dictionaries;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useT } from "../i18n/I18nProvider";
 import type { StringKey } from "../i18n/strings";
 import { hasDatabase } from "../db";
@@ -57,7 +57,6 @@ function download(name: string, text: string) {
 export function ImportPage() {
   const { t } = useT();
   const navigate = useNavigate();
-  const from = (useLocation().state as { from?: string } | null)?.from;
   const [step, setStep] = useState<Step>("choose");
   const [kind, setKind] = useState<ImportKind>("STOCK");
   const [fileName, setFileName] = useState("");
@@ -190,20 +189,7 @@ export function ImportPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        title={t("importTitle")}
-        sub={fileName || undefined}
-        actions={
-          <>
-            {step !== "choose" && <Button onClick={reset}>{t("impStartOver")}</Button>}
-            {step !== "working" && (
-              <Button onClick={() => navigate(from ?? "/")} kbd="Esc">
-                {t("cancel")}
-              </Button>
-            )}
-          </>
-        }
-      />
+      <PageHeader title={t("importTitle")} sub={fileName || undefined} actions={step !== "choose" ? <Button onClick={reset}>{t("impStartOver")}</Button> : undefined} />
       {error && <Banner tone="bad">{error}</Banner>}
 
       {step === "choose" && (

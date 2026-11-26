@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType, type SVGProps } from "react";
 import { Link } from "react-router-dom";
 import { useT } from "../i18n/I18nProvider";
+import { useSettings } from "../app/SettingsContext";
 import type { StringKey } from "../i18n/strings";
 import { hasDatabase } from "../db";
 import { getDashboardCounts, searchItems } from "../db/repo";
@@ -38,6 +39,7 @@ const TILES: Tile[] = [
 
 export function Home({ nearDays }: { nearDays: number }) {
   const { t } = useT();
+  const { settings } = useSettings();
   const [counts, setCounts] = useState<DashboardCounts | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,6 +52,12 @@ export function Home({ nearDays }: { nearDays: number }) {
 
   return (
     <div className="space-y-6">
+      {settings.setup_done !== "1" && hasDatabase() && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warn/30 bg-warn-soft px-5 py-3 text-warn">
+          <span>{t("setupBanner")}</span>
+          <Link to="/settings" className="rounded-lg bg-warn px-4 py-2 font-medium text-white">{t("openSettings")}</Link>
+        </div>
+      )}
       <ItemSearch />
 
       {error && (
@@ -83,7 +91,7 @@ export function Home({ nearDays }: { nearDays: number }) {
           value={counts ? String(counts.low_stock_items) : "—"}
           sub={t("items")}
           tone={counts && counts.low_stock_items > 0 ? "warn" : undefined}
-          to="/stock"
+          to="/low-stock"
         />
       </section>
 
@@ -135,7 +143,10 @@ export function Home({ nearDays }: { nearDays: number }) {
 }
 
 const MASTER_LINKS: { to: string; label: StringKey }[] = [
+  { to: "/bills", label: "bills" },
+  { to: "/purchases", label: "purchases" },
   { to: "/stock", label: "medicines" },
+  { to: "/low-stock", label: "lowStockTitle" },
   { to: "/suppliers", label: "suppliers" },
   { to: "/customers", label: "customers" },
   { to: "/import", label: "importData" },

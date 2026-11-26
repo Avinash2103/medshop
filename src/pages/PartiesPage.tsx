@@ -9,6 +9,11 @@ import { gstin as parseGstin } from "../lib/importer/values";
 import { useFormKeys } from "../hooks/useFormKeys";
 import { Banner, Button, Field, PageHeader, TextInput, inputCls } from "../components/Form";
 import { SearchIcon } from "../components/Icons";
+import { partyBalance, partyLedger, type LedgerRow } from "../db/ops";
+import { planPayment, type MoneyMode } from "../lib/ops/stockOps";
+import { isoDate } from "../lib/stock";
+import { Select } from "../components/Form";
+import { showDate } from "../components/ListTools";
 
 const EMPTY: PartyForm = { name: "", phone: "", address: "", gstin: "", dlNo: "", openingRupees: "", creditLimitRupees: "" };
 
@@ -38,6 +43,39 @@ export function PartiesPage({ table }: { table: PartyTable }) {
   const [savedMsg, setSavedMsg] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
+  const party = isSupplier ? "SUPPLIER" : "CUSTOMER";
+  const [balance, setBalance] = useState(0);
+  const [ledger, setLedger] = useState<LedgerRow[]>([]);
+  const [payAmt, setPayAmt] = useState("");
+  const [payMode, setPayMode] = useState<MoneyMode>("CASH");
+  const [payNote, setPayNote] = useState("");
+  const [payMsg, setPayMsg] = useState<string | null>(null);
+
+  const loadAccount = useCallback((pid: number | null) => {
+    if (!pid || !hasDatabase()) {
+      setBalance(0);
+      setLedger([]);
+      return;
+    }
+    partyBalance(party, pid).then(setBalance).catch(() => {});
+    partyLedger(party, pid).then(setLedger).catch(() => {});
+  }, [party]);
+  useEffect(() => loadAccount(selected), [selected, loadAccount]);
+
+  async function pay() {
+    const amount = Math.round((Number(payAmt) || 0) * 100);
+    if (!selected || amount <= 0) return;
+    try {
+      await planPayment({ party, partyId: selected, amountPaise: amount, mode: payMode, note: payNote, date: isoDate() }).run();
+      setPayAmt("");
+      setPayNote("");
+      setPayMsg(t("paymentSaved"));
+      loadAccount(selected);
+    } catch (e) {
+      const { key, raw } = dbErrorKey(e);
+      setPayMsg(t(key, { msg: raw }));
+    }
+  }
 
   const reload = useCallback(() => {
     if (!hasDatabase()) return;
@@ -99,7 +137,7 @@ export function PartiesPage({ table }: { table: PartyTable }) {
         pick(null);
       } else if (e.altKey && (e.key === "i" || e.key === "I")) {
         e.preventDefault();
-        navigate("/import", { state: { from: `/${table}` } });
+        navigate("/import");
       }
     }
     window.addEventListener("keydown", onKey);
@@ -115,7 +153,7 @@ export function PartiesPage({ table }: { table: PartyTable }) {
         sub={t("partiesCount", { n: rows.length })}
         actions={
           <>
-            <Button onClick={() => navigate("/import", { state: { from: `/${table}` } })} kbd="Alt+I">
+            <Button onClick={() => navigate("/import")} kbd="Alt+I">
               {t("importData")}
             </Button>
             <Button kind="primary" onClick={() => pick(null)} kbd="Alt+N">
@@ -193,6 +231,47 @@ export function PartiesPage({ table }: { table: PartyTable }) {
               </Button>
             </div>
           </form>
+
+          {selected && (
+            <div className="mt-4 space-y-3 rounded-xl border border-line bg-card p-5">
+              <div className="flex items-baseline justify-between">
+                <span className="text-ink-soft">{isSupplier ? t("youOwe") : t("customerOwes")}</span>
+                <span className={"num text-2xl font-bold " + (balance > 0 ? "text-warn" : "text-ok")}>{formatPaise(balance)}</span>
+              </div>
+              {payMsg && <Banner tone="ok">{payMsg}</Banner>}
+              <div className="flex flex-wrap items-end gap-2">
+                <Field label={t("amount")} htmlFor="pay-amt">
+                  <TextInput id="pay-amt" inputMode="decimal" value={payAmt} onChange={(e) => setPayAmt(e.target.value.replace(/[^\d.]/g, ""))} className="w-32" />
+                </Field>
+                <Field label={t("payMode")} htmlFor="pay-mode">
+                  <Select id="pay-mode" value={payMode} onChange={(e) => setPayMode(e.target.value as MoneyMode)} className="w-40">
+                    {(["CASH", "UPI", "CARD", "BANK"] as MoneyMode[]).map((m) => <option key={m} value={m}>{t(`pay${m}` as "payCASH")}</option>)}
+                  </Select>
+                </Field>
+                <Field label={t("note")} htmlFor="pay-note">
+                  <TextInput id="pay-note" value={payNote} onChange={(e) => setPayNote(e.target.value)} className="w-44" />
+                </Field>
+                <Button kind="primary" onClick={pay} disabled={!(Number(payAmt) > 0)}>{isSupplier ? t("makePayment") : t("receivePayment")}</Button>
+              </div>
+              <h3 className="pt-2 text-sm font-semibold text-ink-soft">{t("accountTitle")}</h3>
+              {ledger.length === 0 ? (
+                <p className="text-sm text-ink-soft">{t("noEntries")}</p>
+              ) : (
+                <ul className="divide-y divide-line text-sm">
+                  {ledger.map((l) => {
+                    // Positive = adds to what is owed (customer: debit; supplier: credit).
+                    const up = isSupplier ? l.credit_paise - l.debit_paise : l.debit_paise - l.credit_paise;
+                    return (
+                      <li key={l.id} className="flex justify-between py-1.5">
+                        <span><span className="num text-ink-soft">{showDate(l.entry_date)}</span> · {l.narration}{l.mode ? ` (${t(`pay${l.mode}` as "payCASH")})` : ""}</span>
+                        <span className={"num " + (up > 0 ? "text-warn" : "text-ok")}>{up > 0 ? "+" : "−"} {formatPaise(Math.abs(up))}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
         </section>
       </div>
     </div>
