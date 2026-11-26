@@ -1,0 +1,5 @@
+Supplier Name,Mobile,Address,GSTIN,DL No,Opening Balance
+Shree Ganesh Pharma Distributors,+91 98220 11223,"Shop 4, Market Yard, Pune",27AAACS1234F1Z5,MH-PZ3-123456,15420.50
+Mahalaxmi Medical Agencies,020-24456677,"Budhwar Peth, Pune",27BBBPM5678K1Z2,MH-PZ3-654321,0
+Om Sai Pharma,9850012345,"Hadapsar, Pune",27INVALID,MH-PZ3-111222,2300
+Mahalaxmi Medical Agencies,9822000000,Duplicate row,,,
