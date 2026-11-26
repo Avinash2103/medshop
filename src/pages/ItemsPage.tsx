@@ -58,7 +58,7 @@ export function ItemsPage() {
         navigate("/stock/items/new");
       } else if (e.key === "i" || e.key === "I") {
         e.preventDefault();
-        navigate("/import", { state: { from: "/stock" } });
+        navigate("/import");
       }
     }
     window.addEventListener("keydown", onKey);
@@ -86,7 +86,7 @@ export function ItemsPage() {
         sub={t("itemsCount", { n: total })}
         actions={
           <>
-            <Button onClick={() => navigate("/import", { state: { from: "/stock" } })} kbd="Alt+I">
+            <Button onClick={() => navigate("/import")} kbd="Alt+I">
               {t("importData")}
             </Button>
             <Button kind="primary" onClick={() => navigate("/stock/items/new")} kbd="Alt+N">

@@ -53,14 +53,14 @@ export function Button(props: {
     k === "primary"
       ? "bg-brand text-white hover:bg-brand-ink disabled:opacity-50"
       : k === "ghost"
-        ? "text-brand hover:bg-brand-soft"
-        : "border border-line bg-card text-ink hover:border-brand";
+        ? "text-brand hover:bg-brand-soft disabled:opacity-50"
+        : "border border-line bg-card text-ink hover:border-brand disabled:opacity-50 disabled:hover:border-line";
   return (
     <button
       type={props.type ?? "button"}
       onClick={props.onClick}
       disabled={props.disabled}
-      className={`inline-flex h-10 items-center gap-2 rounded-lg px-4 font-medium transition ${cls}`}
+      className={`inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-4 font-medium transition ${cls}`}
     >
       {props.children}
       {props.kbd && (

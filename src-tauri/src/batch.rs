@@ -31,7 +31,7 @@ pub struct BatchResult {
     last_ids: Vec<i64>,
 }
 
-async fn pool(app: &AppHandle, state: &BatchDb) -> Result<SqlitePool, String> {
+pub async fn pool(app: &AppHandle, state: &BatchDb) -> Result<SqlitePool, String> {
     state
         .0
         .get_or_try_init(|| async {

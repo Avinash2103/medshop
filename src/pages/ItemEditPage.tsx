@@ -12,6 +12,7 @@ import { expiryStatus, formatExpiry, formatQty, isoDate } from "../lib/stock";
 import { useFormKeys } from "../hooks/useFormKeys";
 import { setLeaveGuard } from "../hooks/leaveGuard";
 import { Banner, Button, Field, PageHeader, Select, TextInput } from "../components/Form";
+import { planAdjustment } from "../lib/ops/stockOps";
 
 const UNITS = ["TAB", "CAP", "BTL", "TUBE", "PCS", "ML", "GM", "AMP", "VIAL", "SACHET", "KIT"];
 const SCHEDULES: { v: Schedule; k: StringKey }[] = [
@@ -51,6 +52,24 @@ export function ItemEditPage() {
   const [saving, setSaving] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
+  const [adjusting, setAdjusting] = useState<number | null>(null);
+  const [counted, setCounted] = useState("");
+  const [adjReason, setAdjReason] = useState("");
+  const [adjMsg, setAdjMsg] = useState<string | null>(null);
+
+  async function saveAdjustment(b: BatchRow) {
+    const plan = planAdjustment({ batchId: b.id, currentUnits: b.qty_units, countedUnits: Math.max(0, Number(counted) || 0), reason: adjReason });
+    setAdjusting(null);
+    if (!plan || !id) return;
+    try {
+      await plan.run();
+      setAdjMsg(t("adjusted"));
+      setBatches(await getBatches(id));
+    } catch (e) {
+      const { key, raw } = dbErrorKey(e);
+      setAdjMsg(t(key, { msg: raw }));
+    }
+  }
 
   useEffect(() => {
     if (!hasDatabase()) return;
@@ -202,6 +221,7 @@ export function ItemEditPage() {
       {id && (
         <section className="mt-6">
           <h2 className="mb-2 text-lg font-semibold">{t("batchesTitle")}</h2>
+          {adjMsg && <div className="mb-2"><Banner tone="ok">{adjMsg}</Banner></div>}
           {batches.length === 0 ? (
             <p className="text-ink-soft">{t("noBatches")}</p>
           ) : (
@@ -214,6 +234,7 @@ export function ItemEditPage() {
                     <th className="px-4 py-2 text-right font-medium">{t("colMrp")}</th>
                     <th className="px-4 py-2 text-right font-medium">{t("fPurchaseRate")}</th>
                     <th className="px-4 py-2 text-right font-medium">{t("colQty")}</th>
+                    <th className="px-4 py-2" />
                   </tr>
                 </thead>
                 <tbody>
@@ -226,6 +247,21 @@ export function ItemEditPage() {
                         <td className="num px-4 py-2 text-right">{formatPaise(b.mrp_paise)}</td>
                         <td className="num px-4 py-2 text-right">{formatPaise(b.purchase_rate_paise)}</td>
                         <td className="num px-4 py-2 text-right">{formatQty(b.qty_units, form.packSize, form.unit.toLowerCase())}</td>
+                        <td className="px-4 py-1.5 text-right">
+                          {adjusting === b.id ? (
+                            <span className="inline-flex items-center gap-2">
+                              <input aria-label={t("countedUnits")} placeholder={t("countedUnits")} inputMode="numeric" autoFocus value={counted}
+                                onChange={(e) => setCounted(e.target.value.replace(/\D/g, ""))} className="h-9 w-32 rounded-md border border-line px-2 text-right num" />
+                              <input aria-label={t("reason")} placeholder={t("adjustReasonPh")} value={adjReason} onChange={(e) => setAdjReason(e.target.value)}
+                                className="h-9 w-44 rounded-md border border-line px-2" />
+                              <Button kind="primary" onClick={() => saveAdjustment(b)} disabled={counted === ""}>{t("adjustSave")}</Button>
+                            </span>
+                          ) : (
+                            <button type="button" className="text-sm text-brand hover:underline" onClick={() => { setAdjusting(b.id); setCounted(String(b.qty_units)); setAdjReason(""); setAdjMsg(null); }}>
+                              {t("adjust")}
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}

@@ -1,99 +1,87 @@
 # MedShop — offline medical shop software
 
 Tauri 2 + React 19 + TypeScript + SQLite. Runs fully offline on Windows.
-**Sprint 1**: medicine / supplier / customer screens, Excel-CSV import of existing stock, GST 2.0 rates.
-(Sprint 0 gave the skeleton, schema, design system and home screen.)
+**Prototype v1**: every daily feature of a retail pharmacy at a basic, working level.
 
-## Windows पर पहली बार setup (एक बार)
+## Windows पर setup (एक बार)
 
-1. **Node.js 22 LTS** install करें — https://nodejs.org
-2. **Rust** install करें — https://rustup.rs (`rustup-init.exe` चलाएँ, default options)
-3. **Microsoft C++ Build Tools** — Visual Studio Installer से "Desktop development with C++" चुनें
-4. **WebView2** — Windows 10/11 में पहले से होता है
-5. Project folder में:
+1. **Node.js 22 LTS**, **Rust** (rustup), **Microsoft C++ Build Tools** ("Desktop development with C++") install करें। WebView2 Windows 10/11 में पहले से होता है।
+2. Project folder में:
 
 ```bash
 npm install
-npm run tauri dev     # app खुलेगा, पहली बार Rust compile में 3–5 मिनट लगेंगे
+npm run tauri dev     # development में app खोलें
+npm run tauri build   # दुकान के लिए installer: src-tauri/target/release/bundle/ में .msi और .exe
 ```
 
-Installer बनाने के लिए: `npm run tauri build` → `src-tauri/target/release/bundle/` में `.msi` और `.exe` मिलेगा।
+## दुकान में रोज़ का काम
 
-## Sprint 1 में क्या नया है
+| काम | कहाँ | Shortcut |
+| --- | --- | --- |
+| बिल बनाना | नया बिल | **F2** → दवा टाइप करें → Enter → Tab से पैक / खुली / छूट → **F10** सेव + प्रिंट |
+| सप्लायर का बिल डालना | खरीद एंट्री | **F3** → सप्लायर, बिल नं. → दवा जोड़ें → Enter से बैच, एक्सपायरी, पैक, फ़्री, रेट, MRP → **Ctrl+S** |
+| दवा खोजना / स्टॉक देखना | स्टॉक | **F6** (हर screen पर **F4** = खोज) |
+| एक्सपायरी देखना, वापस भेजना | एक्सपायरी अलर्ट | **F7** → चुनें → सप्लायर को वापस / राइट-ऑफ़ |
+| दिन का हिसाब, GST, H1 रजिस्टर | रिपोर्ट | **F8** → प्रिंट या Excel |
+| दुकान की जानकारी, बैकअप | सेटिंग्स | **F9** |
+| पिछले बिल, वापसी, रद्द | होम → बिल | बिल खोलें → दवा वापसी / बिल रद्द |
+| उधार वसूली, सप्लायर भुगतान | होम → ग्राहक / सप्लायर | नाम चुनें → रकम → पैसे मिले / भुगतान |
 
-- **GST 2.0** (22 Sep 2025 से): दवाओं पर 0% / 5% / 18%। Migration `002` पुराने 12% items को 5% कर देता है, और DB अब 12%/28% स्वीकार नहीं करता।
-- **दवाएँ (F6):** list + search; `Alt+N` नई दवा, `Enter` से अगला field, `Ctrl+S` save, `Esc` वापस। एक ही नाम की दवा पहले से हो तो चेतावनी। स्टॉक होने पर pack size lock हो जाता है।
-- **सप्लायर / ग्राहक:** list + form, GSTIN check।
-- **Excel / CSV import** (`Alt+I`): file चुनें → कॉलम अपने-आप पहचाने जाते हैं → जाँचें → import।
-  - Marg जैसी reports की title lines छोड़कर असली header ढूँढता है।
-  - Expiry के सारे formats: `08/27`, `Jan-28`, `0628`, `31/08/2027`, Excel dates।
-  - Pack: `15's`, `1x15`, `15 TAB`, `150ML`। मात्रा: `3`, `2.5`, `2:5` (2 strip + 5 tablet)।
-  - गलत lines छोड़ दी जाती हैं और कारण के साथ दिखती हैं; पूरा import एक transaction में (या सब, या कुछ नहीं)।
-  - वही file layout दोबारा आए तो पिछली बार का column मिलान याद रहता है।
-  - दूसरी बार opening stock import करने से पहले चेतावनी (वरना stock दोगुना होगा)।
-- **"सैंपल डेटा से आज़माएँ"** बटन: `templates/sample-opening-stock.csv` (29 दवाएँ, जानबूझकर गड़बड़ data) से पूरा import try करें।
+**Esc** = एक कदम पीछे। बिना सेव किए छोड़ने पर पहले चेतावनी आती है।
 
-`.xls` (पुराना Excel) अभी सीधे नहीं पढ़ता: Excel में खोलकर **Save As → .xlsx** करें।
+## क्या-क्या है (Prototype v1)
 
-> **Sample data हटाना:** test के बाद असली data डालने से पहले app बंद करें और `%APPDATA%\com.medshop.app\medshop.db*` files delete करें; अगली बार खाली DB बनेगा।
+- **बिलिंग:** सबसे पहले एक्सपायर होने वाला बैच अपने-आप (FEFO), एक्सपायर्ड बैच कभी नहीं; स्ट्रिप + खुली गोलियाँ; लाइन या पूरे बिल पर छूट; MRP से ज़्यादा रेट नहीं; नकद / UPI / कार्ड / उधार; ग्राहक मोबाइल से खोजें; मिले पैसे → वापसी।
+- **H1 / X / NDPS:** डॉक्टर और मरीज़ की जानकारी के बिना बिल सेव नहीं होता; शेड्यूल रजिस्टर अपने-आप भरता है।
+- **बिल प्रिंट:** थर्मल 58 / 80 mm या A5 / A4; दुकान, GSTIN, ड्रग लाइसेंस, बैच + एक्सपायरी, CGST / SGST, Rx जानकारी, फ़ार्मासिस्ट।
+- **बिल नंबर:** S/2026-27/000001, हर 1 अप्रैल से फिर शुरू; दो बिल कभी एक नंबर नहीं पा सकते।
+- **वापसी और रद्द:** जितना बेचा उससे ज़्यादा वापस नहीं (database ख़ुद रोकता है); रद्द करने पर स्टॉक और उधार वापस।
+- **खरीद:** फ़्री माल, छूट, GST; पिछली खरीद का रेट दिखता है और 10% से ज़्यादा फ़र्क़ पर चेतावनी; एक ही सप्लायर बिल दो बार नहीं; गलत खरीद रद्द (अगर माल बिका नहीं)।
+- **स्टॉक:** बैच-वार; गिनती से ठीक करना (कारण के साथ, audit log में); कम स्टॉक की ऑर्डर लिस्ट।
+- **एक्सपायरी:** एक्सपायर्ड और जल्दी एक्सपायर होने वाली; सप्लायर को वापस (क्रेडिट नोट दावा खाते में) या राइट-ऑफ़।
+- **खाते:** ग्राहक का उधार, सप्लायर का बकाया, भुगतान, पिछली 100 एंट्री।
+- **रिपोर्ट:** दिन का हिसाब (गल्ले में नकद सहित), बिक्री और खरीद रजिस्टर, GST सारांश (वापसी घटाकर, ITC, HSN), शेड्यूल H1 / X रजिस्टर, स्टॉक की कीमत — सब प्रिंट और Excel में।
+- **बैकअप:** रोज़ अपने-आप (`Documents\MedShop Backups`, आखिरी 30); "अभी बैकअप लें"; फ़ाइल से वापस लाना (पहले मौजूदा डेटा का बैकअप); "नए सिरे से शुरू" (सैंपल डेटा मिटाने के लिए)।
+- **Import:** Excel / CSV से दवाएँ + शुरुआती स्टॉक, सप्लायर, ग्राहक (Sprint 1)।
+- **भाषा:** हिंदी, English, मराठी।
 
-## Daily commands
+## अभी नहीं है (feedback के बाद)
 
-| Command | काम |
-| --- | --- |
-| `npm run tauri dev` | Desktop app development mode में |
-| `npm test` | Calculation tests (GST, discount, strips, expiry) |
-| `npm run typecheck` | TypeScript errors check |
-| `npm run dev` | सिर्फ़ UI browser में (database के बिना) |
+User login / PIN और roles, distributor की purchase file import, barcode label print, WhatsApp बिल, एक से ज़्यादा counter (LAN), Tally export, e-invoice।
 
 ## Folder structure
 
 ```
 src/
-  App.tsx              routes + startup (settings load)
-  index.css            design tokens (colours, fonts) — रंग यहीं बदलें
-  components/          AppShell (header), Icons
-  pages/               Home, ComingSoon (बाकी screens अगले sprints में)
-  hooks/useShortcuts   F2 बिल, F3 खरीद, F4 खोज, F6 स्टॉक, F7 एक्सपायरी, F8 रिपोर्ट, F9 सेटिंग्स, Esc होम
-  i18n/                English / हिंदी / मराठी text
-  db/                  index.ts (reads), batch.ts (writes in one transaction), repo.ts, masters.ts, errors.ts
-  lib/                 money.ts, stock.ts, gst.ts — pure logic + tests
-  lib/importer/        read → mapping → values → stockImport / partyImport (+ importer.test.ts)
-templates/             blank import templates + sample files
+  App.tsx                 routes, settings, daily auto-backup
+  app/SettingsContext     shop settings everywhere
+  pages/                  Billing, Bills, BillView, Purchase, Purchases, Expiry, LowStock, Items, ItemEdit,
+                          Parties (suppliers/customers + accounts), Import, Reports, Settings, Home
+  components/             Form, ListTools, Print (print job), BillPrint (printed bill), Icons
+  db/                     index.ts (reads), batch.ts (writes in one transaction), ops.ts / masters.ts / repo.ts (queries)
+  lib/ops/                sale.ts, purchase.ts, stockOps.ts, fy.ts — business rules, no screens (+ ops.test.ts)
+  lib/importer/           Excel/CSV import engine (+ importer.test.ts)
+  lib/                    money.ts, stock.ts, gst.ts, csv.ts
+  i18n/                   strings.ts, strings.sprint1.ts, strings.daily.ts (English / हिंदी / मराठी)
 src-tauri/
-  migrations/001_init.sql   पूरा database schema
-  migrations/002_gst2_and_imports.sql   GST 2.0, sale ≤ MRP, import tables
-  src/lib.rs                SQL plugin + migrations
-  src/batch.rs              run_batch: बहुत सारे statements एक transaction में
+  migrations/001…003      database schema; never edit an old file, add a new one
+  src/batch.rs            run_batch: many statements in one transaction
+  src/backup.rs           backup (VACUUM INTO), auto-backup, restore, reset
+templates/                import templates + sample files
 ```
 
 ## Data rules (इन्हें कभी न तोड़ें)
 
-- **पैसे integer paise में** (₹34.10 = 3410)। कभी `REAL`/float में नहीं।
-- **Quantity सबसे छोटी unit में** (tablet/ml)। Strip सिर्फ़ दिखाने के लिए।
-- **GST rate basis points में** (12% = 1200)।
-- **Stock सिर्फ़ `stock_moves` में row डालकर बदलता है।** Trigger अपने-आप `batches.qty_units` update करता है। Stock negative होने पर DB ख़ुद error देगा (`STOCK_NEGATIVE`)।
-- `stock_moves` और `schedule_register` से कुछ delete नहीं हो सकता — DB triggers रोकते हैं।
-- Bill delete नहीं, cancel होता है (`status = 'CANCELLED'`)।
-- Schema बदलना हो तो **नई migration file** (`002_xxx.sql`) बनाएँ और `lib.rs` में जोड़ें; पुरानी file कभी edit न करें।
-
-## Database कहाँ है
-
-`%APPDATA%\com.medshop.app\medshop.db` — backup के लिए यही file (साथ में `-wal` file भी) copy करनी है।
-Inspect करने के लिए [DB Browser for SQLite](https://sqlitebrowser.org) से खोलें।
-
-## Reads vs writes
-
-- **Reads** (`query`, `queryOne` in `db/index.ts`) go through `tauri-plugin-sql`.
-- **Writes that touch more than one row** go through `new Batch().add(...).run()` (`db/batch.ts` → Rust `run_batch`).
-  It runs everything in one SQLite transaction on a single connection, so a failure saves nothing.
-  The plugin's pool cannot guarantee that for `BEGIN … COMMIT` sent from JavaScript.
+- **पैसे integer paise में** (₹34.10 = 3410)। **Quantity सबसे छोटी unit में** (tablet / ml)। **GST basis points में** (5% = 500)।
+- **Stock सिर्फ़ `stock_moves` से बदलता है**; trigger `batches.qty_units` अपडेट करता है और negative stock रोकता है।
+- `stock_moves`, `schedule_register` delete नहीं होते। बिल और खरीद delete नहीं, cancel होते हैं।
+- एक से ज़्यादा row वाला हर write `Batch` (Rust `run_batch`) से — या सब सेव, या कुछ नहीं।
+- Schema बदलना हो तो नई migration (`004_…sql`) और `lib.rs` में जोड़ें।
 
 ## Tested
 
-- 45 automated tests (`npm test`): GST, money, expiry/pack/quantity parsing, column detection, and the full sample import run against a real SQLite database with both migrations (including rollback on error).
-- Search speed: 10,000 medicines + 15,000 batches → each search about 1 ms (target was < 300 ms).
+- **68 automated tests** (`npm test`): पैसे / GST, import, और billing, purchase, return, cancel, expiry, adjustment, payment, सारी reports — असली SQLite database पर तीनों migrations के साथ।
+- **पूरे दिन का UI test** (Chrome में, असली SQLite पर): setup → import → खरीद → नकद / UPI / H1 / उधार बिल + प्रिंट → वापसी → रद्द → एक्सपायरी राइट-ऑफ़ → उधार वसूली → स्टॉक गिनती → सारी reports। 22/22 checks, हर बैच का स्टॉक उसकी movements के जोड़ के बराबर।
+- 10,000 दवाओं पर खोज ≈ 1 ms।
 
-## Next: Sprint 2
-
-Purchase entry: तेज़ keyboard grid + distributor की CSV/Excel file से import (हर distributor का format एक बार map करें)। Purchase rate पिछली बार से अलग हो तो चेतावनी।
+Windows पर अभी जाँचना बाकी: असली printer (थर्मल / A4), backup / restore / reset (Rust commands), installer।

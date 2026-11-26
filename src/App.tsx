@@ -1,19 +1,28 @@
 import { useEffect, useState } from "react";
 import { HashRouter, Route, Routes } from "react-router-dom";
+import { invoke } from "@tauri-apps/api/core";
 import { I18nProvider } from "./i18n/I18nProvider";
 import type { Lang } from "./i18n/strings";
+import { SettingsProvider, nearDaysOf, useSettings, type AppSettings } from "./app/SettingsContext";
 import { AppShell } from "./components/AppShell";
 import { Home } from "./pages/Home";
-import { ComingSoon } from "./pages/ComingSoon";
 import { ItemsPage } from "./pages/ItemsPage";
 import { ItemEditPage } from "./pages/ItemEditPage";
 import { PartiesPage } from "./pages/PartiesPage";
 import { ImportPage } from "./pages/ImportPage";
+import { BillingPage } from "./pages/BillingPage";
+import { BillsPage } from "./pages/BillsPage";
+import { BillViewPage } from "./pages/BillViewPage";
+import { PurchasePage } from "./pages/PurchasePage";
+import { PurchasesPage, PurchaseViewPage } from "./pages/PurchasesPage";
+import { ExpiryPage } from "./pages/ExpiryPage";
+import { LowStockPage } from "./pages/LowStockPage";
+import { ReportsPage } from "./pages/ReportsPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { hasDatabase } from "./db";
 import { getSettings } from "./db/repo";
-import type { Settings } from "./db/types";
 
-type Boot = { status: "loading" } | { status: "ready"; settings: Partial<Settings> } | { status: "error"; msg: string };
+type Boot = { status: "loading" } | { status: "ready"; settings: AppSettings } | { status: "error"; msg: string };
 
 export default function App() {
   const [boot, setBoot] = useState<Boot>({ status: "loading" });
@@ -23,9 +32,9 @@ export default function App() {
       setBoot({ status: "ready", settings: {} });
       return;
     }
-    // First open runs the migrations, so this also creates the database.
+    // First open runs the migrations, so this also creates or upgrades the database.
     getSettings()
-      .then((settings) => setBoot({ status: "ready", settings }))
+      .then((settings) => setBoot({ status: "ready", settings: settings as AppSettings }))
       .catch((e) => setBoot({ status: "error", msg: String(e) }));
   }, []);
 
@@ -40,30 +49,49 @@ export default function App() {
     );
   }
 
-  const s = boot.settings;
-  const lang = (["en", "hi", "mr"].includes(s.language ?? "") ? s.language : "hi") as Lang;
-  const nearDays = Number(s.near_expiry_days) || 90;
+  const lang = (["en", "hi", "mr"].includes(boot.settings.language ?? "") ? boot.settings.language : "hi") as Lang;
+  return (
+    <SettingsProvider initial={boot.settings}>
+      <I18nProvider initial={lang}>
+        <HashRouter>
+          <AppRoutes />
+        </HashRouter>
+      </I18nProvider>
+    </SettingsProvider>
+  );
+}
+
+function AppRoutes() {
+  const { settings } = useSettings();
+  const nearDays = nearDaysOf(settings);
+
+  // Daily safety copy. Runs in the background; a failure never blocks the counter.
+  useEffect(() => {
+    if (hasDatabase()) invoke("backup_auto", { dir: settings.backup_dir?.trim() || null }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <I18nProvider initial={lang}>
-      <HashRouter>
-        <Routes>
-          <Route element={<AppShell shopName={s.shop_name ?? ""} />}>
-            <Route index element={<Home nearDays={nearDays} />} />
-            <Route path="bill" element={<ComingSoon title="newBill" sprint={3} />} />
-            <Route path="purchase" element={<ComingSoon title="purchase" sprint={2} />} />
-            <Route path="stock" element={<ItemsPage />} />
-            <Route path="stock/items/:id" element={<ItemEditPage />} />
-            <Route path="suppliers" element={<PartiesPage table="suppliers" />} />
-            <Route path="customers" element={<PartiesPage table="customers" />} />
-            <Route path="import" element={<ImportPage />} />
-            <Route path="expiry" element={<ComingSoon title="expiry" sprint={4} />} />
-            <Route path="reports" element={<ComingSoon title="reports" sprint={6} />} />
-            <Route path="settings" element={<ComingSoon title="settings" sprint={4} />} />
-            <Route path="*" element={<Home nearDays={nearDays} />} />
-          </Route>
-        </Routes>
-      </HashRouter>
-    </I18nProvider>
+    <Routes>
+      <Route element={<AppShell shopName={settings.shop_name ?? ""} />}>
+        <Route index element={<Home nearDays={nearDays} />} />
+        <Route path="bill" element={<BillingPage />} />
+        <Route path="bills" element={<BillsPage />} />
+        <Route path="bills/:id" element={<BillViewPage />} />
+        <Route path="purchase" element={<PurchasePage />} />
+        <Route path="purchases" element={<PurchasesPage />} />
+        <Route path="purchases/:id" element={<PurchaseViewPage />} />
+        <Route path="stock" element={<ItemsPage />} />
+        <Route path="stock/items/:id" element={<ItemEditPage />} />
+        <Route path="low-stock" element={<LowStockPage />} />
+        <Route path="suppliers" element={<PartiesPage table="suppliers" />} />
+        <Route path="customers" element={<PartiesPage table="customers" />} />
+        <Route path="import" element={<ImportPage />} />
+        <Route path="expiry" element={<ExpiryPage />} />
+        <Route path="reports" element={<ReportsPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route path="*" element={<Home nearDays={nearDays} />} />
+      </Route>
+    </Routes>
   );
 }

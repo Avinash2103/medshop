@@ -8,6 +8,10 @@ export function dbErrorKey(e: unknown): { key: StringKey; raw: string } {
   const raw = e instanceof Error ? e.message : String(e);
   const rules: [RegExp, StringKey][] = [
     [/STOCK_NEGATIVE/, "errStockNegative"],
+    [/RETURN_MORE_THAN_SOLD/, "errRETURN_MORE_THAN_SOLD"],
+    [/ALREADY_CANCELLED/, "errALREADY_CANCELLED"],
+    [/NOT_A_BACKUP/, "errNotBackup"],
+    [/UNIQUE constraint failed: purchases\.supplier_id/, "errSupplierBillDup"],
     [/GST_RATE_INVALID/, "errGstInvalid"],
     [/SALE_RATE_ABOVE_MRP/, "errSaleAboveMrp"],
     [/UNIQUE constraint failed: items\.barcode/, "errBarcodeUsed"],
